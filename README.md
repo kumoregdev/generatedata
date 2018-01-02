@@ -19,6 +19,6 @@ python3 src/gen.py <number of rows>
 
 Example:
 ```
-python3 src/gen.py 5000 > ~/test.csv
+python3 src/gen.py 5000 > ~/test.json
 ```
 

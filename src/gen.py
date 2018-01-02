@@ -8,6 +8,7 @@ import datetime
 import random
 import hashlib
 import sys
+import json
 
 
 def get_badge_name():
@@ -16,15 +17,6 @@ def get_badge_name():
     n = n.replace('.', ' ')
     n = n.replace('_', ' ')
     return n
-
-fields = ['First Name', 'Last Name', 'Legal First Name', 'Legal Last Name', 'Badge Name', 'Badge Number', 'Zipcode',
-          'Country', 'Phone Number', 'Email Address', 'Birthdate', 'Emergency Contact Name',
-          'Emergency Contact Phone', 'Parent is Emergency Contact', 'Parent Name', 'Parent Phone',
-          'Paid', 'Amount', 'Pass Type', 'Order ID']
-
-
-def print_header():
-    print('\t'.join(fields))
 
 
 def generate_birthday():
@@ -46,7 +38,7 @@ if __name__ == '__main__':
         else:
             rows = int(sys.argv[1])
 
-    print_header()
+    output = []
 
     order_id = 1
     for i in range(rows):
@@ -54,75 +46,89 @@ if __name__ == '__main__':
         age = datetime.datetime.now() - birth_date
         age = int(age.days / 365.25)            # Not the right way to calculate age, but close enough
 
-        data = [name.first_name(), name.last_name()]
+        attendee = {'firstName': name.first_name(), 'lastName': name.last_name()}
+
         if random.randint(1, 100) < 10:         # random chance of having a legal name
-            data.append(name.first_name())
-            data.append(name.last_name())
+            attendee['firstNameOnId'] = name.first_name()
+            attendee['lastNameOnId'] = name.last_name()
+            attendee['nameOnIdIsPreferredName'] = False
         else:
-            data.append("")
-            data.append("")
+            attendee['firstNameOnId'] = attendee['firstName']
+            attendee['lastNameOnId'] = attendee['lastName']
+            attendee['nameOnIdIsPreferredName'] = True
 
         if random.randint(1, 100) < 60:         # Random chance of having a badge name
-            data.append(get_badge_name())
+            attendee['fanName'] = get_badge_name()
         else:
-            data.append("")
-        data.append("ONL{0:05d}".format(i))
-        data.append(address.zip_code())
-        data.append("United States of America")
+            attendee['fanName'] = ""
 
-        data.append(phone_number.phone_number())
-        data.append(internet.email())
-        data.append("{0:4d}-{1:02d}-{2:02d}".format(birth_date.year, birth_date.month, birth_date.day))
-        data.append(name.find_name())
+        attendee['postal'] = address.zip_code()
+        attendee['country'] = "United States of America"
 
-        data.append(phone_number.phone_number())
+        attendee['phone'] = phone_number.phone_number()
+        attendee['email'] = internet.email()
+        attendee['birthdate'] = "{0:4d}-{1:02d}-{2:02d}".format(birth_date.year, birth_date.month, birth_date.day)
+
+        attendee['emergencyName'] = name.find_name()
+        attendee['emergencyPhone'] = phone_number.phone_number()
+
         if age <= 17:
-            data.append('Y')
-            data.append(data[11])
-            data.append(data[12])
+            attendee['parentName'] = attendee['emergencyName']
+            attendee['parentPhone'] = attendee['emergencyPhone']
+            attendee['emergencyContactSameAsParent'] = True
         else:
-            data.append('N')
-            data.append("")
-            data.append("")
-        data.append("Y")
+            attendee['parentName'] = ""
+            attendee['parentPhone'] = ""
+            attendee['emergencyContactSameAsParent'] = False
+
         if age >= 13:
-            data.append(str(random.choice([45, 50, 55, 57])))    # 13+ full price
+            attendee['amountPaidInCents'] = str(random.choice([4500, 5000, 5500, 5700]))    # 13+ full price
         elif 6 >= age < 13:
-            data.append("45")     # Youth
+            attendee['amountPaidInCents'] = "4500"    # 13+ full price
         else:
-            data.append("0")      # Children are free
+            attendee['amountPaidInCents'] = "0"
+
+        attendee['vipTShirtSize'] = ''
 
         random_badge = random.randint(1, 1000)
         if random_badge < 2:      # Random chance of VIP membership
-            data.append('VIP')
-            data[17] = "300"
+            attendee['membershipType'] = "VIP"
+            attendee['amountPaidInCents'] = "30000"
+            attendee['vipTShirtSize'] = random.choice(['S', 'M', 'L', 'XL'])
         elif random_badge < 10:
-            data.append("Artist")
-            data[17] = 50
+            attendee['membershipType'] = "Artist"
+            attendee['amountPaidInCents'] = "5000"
         elif random_badge < 20:
-            data.append("Exhibitor")
-            data[17] = 25
+            attendee['membershipType'] = "Exhibitor"
+            attendee['amountPaidInCents'] = "2500"
         elif random_badge < 25:
-            data.append("Guest")
-            data[17] = 0
+            attendee['membershipType'] = "Guest"
+            attendee['amountPaidInCents'] = "0"
         elif random_badge < 26:
-            data.append("Emerging Press")
-            data[17] = 0
+            attendee['membershipType'] = "Emerging Press"
+            attendee['amountPaidInCents'] = "0"
         elif random_badge < 29:
-            data.append("Standard Press")
-            data[17] = 0
+            attendee['membershipType'] = "Standard Press"
+            attendee['amountPaidInCents'] = "0"
         elif random_badge < 35:
-            data.append("Industry")
-            data[17] = 0
+            attendee['membershipType'] = "Industry"
+            attendee['amountPaidInCents'] = "0"
         elif random_badge < 43:
-            data.append("Panelist")
-            data[17] = 0
+            attendee['membershipType'] = "Panelist"
+            attendee['amountPaidInCents'] = "0"
         else:
-            data.append('Weekend')
-        data.append(hashlib.md5(str(order_id).encode('utf-8')).hexdigest())
+            attendee['membershipType'] = "Weekend"
 
-        data = [str(i) for i in data]
-        print('\t'.join(data))
+        attendee['notes'] = ''
+
+        attendee['orderId'] = hashlib.md5(str(order_id).encode('utf-8')).hexdigest()
+
+        output.append(attendee)
 
         if random.randint(1, 100) < 65:
             order_id += 1
+
+    print(json.dumps(output))
+
+    # print(len(output))
+    #
